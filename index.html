@@ -11,16 +11,13 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-
         body {
             background-color: #eef2f8;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
             padding: 20px 16px 40px;
             color: #1e2f3a;
         }
-
         .container { max-width: 640px; margin: 0 auto; }
-
         .profile-card {
             background: white; border-radius: 32px; padding: 20px;
             margin-bottom: 24px; box-shadow: 0 8px 20px rgba(0,0,0,0.05);
@@ -52,7 +49,6 @@
             background: #f0f2f6; border: none; padding: 5px 14px;
             border-radius: 20px; font-size: 12px; cursor: pointer; color: #3b5b9b;
         }
-
         .publish-card {
             background: white; border-radius: 28px; padding: 18px 20px 20px;
             margin-bottom: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);
@@ -84,7 +80,6 @@
             border-radius: 40px; font-weight: 600; cursor: pointer;
         }
         .publish-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
         .moment-card {
             background: white; border-radius: 28px; margin-bottom: 20px;
             padding: 18px 20px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);
@@ -118,7 +113,6 @@
             line-height: 1; letter-spacing: 2px;
         }
         .more-btn:hover { background: #f0f3f9; color: #4a7cd6; }
-
         .dropdown-menu {
             position: fixed;
             background: white; border-radius: 16px;
@@ -132,7 +126,6 @@
         }
         .dropdown-menu button:hover { background: #f4f7fc; }
         .dropdown-menu button.danger { color: #d16565; }
-
         .comment-section { margin-top: 24px; }
         .comment-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 2px; }
         .comment-item {
@@ -147,7 +140,6 @@
             font-size: 10px; padding: 2px 6px; border-radius: 20px; margin-left: 4px;
         }
         .delete-comment-btn:hover { color: #d16565; background: #fff0f0; }
-
         .comment-input-row { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
         .comment-input-row.hidden { display: none; }
         .comment-input {
@@ -158,10 +150,8 @@
             background: #eef2f8; border: none; border-radius: 18px;
             padding: 4px 14px; font-size: 11px; color: #4a7cd6; cursor: pointer;
         }
-
         .empty-tip { text-align: center; padding: 48px 24px; color: #8f9eb2; }
         footer { text-align: center; font-size: 12px; color: #8f9bb3; margin-top: 20px; }
-
         .modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.5); display: flex; align-items: center;
@@ -180,14 +170,14 @@
         .modal-btn { padding: 8px 20px; border-radius: 30px; border: none; cursor: pointer; font-size: 14px; }
         .btn-primary { background: #4a7cd6; color: white; }
         .btn-secondary { background: #eef2f8; color: #3b5b9b; }
-
         @media (max-width: 550px) {
             .moment-img { width: calc(33% - 5px); }
         }
+        /* 简单加载指示器 */
+        .loading-tip { text-align: center; padding: 20px; color: #6f7e95; font-size: 13px; display: flex; justify-content: center; gap: 8px; align-items: center; }
     </style>
 </head>
 <body>
-
 <div id="mainContent" style="display: block;">
     <div class="container">
         <div class="profile-card" id="profileCard">
@@ -226,11 +216,11 @@
             </div>
         </div>
 
-        <div id="momentsFeed"></div>
+        <div id="momentsFeed"><div class="loading-tip">🔄 加载动态中...</div></div>
         <footer>🌍 数据已同步至云端 · 任何设备打开都是同一份记忆</footer>
     </div>
 
-    <!-- 头像编辑模态框 -->
+    <!-- 模态框和菜单 -->
     <div id="avatarModal" class="modal-overlay" style="display: none;">
         <div class="modal-box">
             <div class="modal-title">修改头像</div>
@@ -246,8 +236,6 @@
             </div>
         </div>
     </div>
-
-    <!-- 三点菜单 -->
     <div id="momentDropdown" class="dropdown-menu">
         <button id="dropdownAddComment">💬 添加备注</button>
         <button id="dropdownDeleteMoment" class="danger">🗑 删除动态</button>
@@ -256,20 +244,24 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // ==================== Supabase 配置（已填入您的项目信息）====================
+    // ==================== Supabase 配置 ====================
     const SUPABASE_URL = "https://fetrxvvibckpmhfvwfgi.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZldHJ4dnZpYmNrcG1oZnZ3ZmdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMTk3MTYsImV4cCI6MjA5MzY5NTcxNn0.Y73SytNuBKWNksmnW_ZAoTMuxJJDtJjSFzMCJtLPk1E";
-    // =================================================================
+    // ====================================================
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let supabaseClient = null;
+    try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch(e) { console.error("Supabase 初始化失败", e); }
 
     // 全局数据
     let momentsList = [];
     let tempImageFiles = [];
     let currentMomentId = null;
     let userProfile = { avatarType: 'emoji', avatarValue: '🐻', nickname: '林间小叙' };
+    let isOnline = true;
 
-    // DOM 元素
+    // DOM 元素引用
     const postTextarea = document.getElementById('postText');
     const imageUpload = document.getElementById('imageUpload');
     const previewContainer = document.getElementById('imagePreviewContainer');
@@ -292,7 +284,7 @@
     const dropdownAddComment = document.getElementById('dropdownAddComment');
     const dropdownDelete = document.getElementById('dropdownDeleteMoment');
 
-    // 辅助函数
+    // ========== 辅助函数 ==========
     function formatTime(ts) {
         const d = new Date(ts);
         return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -304,7 +296,6 @@
     function linkify(text) {
         return escapeHtml(text).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
     }
-
     async function compressImage(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -330,94 +321,148 @@
             reader.readAsDataURL(file);
         });
     }
+    function showErrorMsg(msg, duration = 3000) {
+        let errDiv = document.getElementById('global-error-toast');
+        if (!errDiv) {
+            errDiv = document.createElement('div');
+            errDiv.id = 'global-error-toast';
+            errDiv.style.cssText = 'position:fixed; bottom:20px; left:20px; right:20px; background:#d16565; color:white; padding:10px 16px; border-radius:40px; text-align:center; font-size:13px; z-index:10001; box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+            document.body.appendChild(errDiv);
+        }
+        errDiv.textContent = msg;
+        errDiv.style.display = 'block';
+        setTimeout(() => { errDiv.style.display = 'none'; }, duration);
+    }
 
-    // ---------- 云端操作 ----------
+    // ========== 云端操作 (带错误恢复) ==========
     async function loadProfile() {
-        const { data, error } = await supabase.from('user_profile').select('*').eq('user_id', 'single_user');
-        if (error) { console.error(error); return; }
-        if (data && data.length > 0) {
-            userProfile = {
-                avatarType: data[0].avatar_type || 'emoji',
-                avatarValue: data[0].avatar_value || '🐻',
-                nickname: data[0].nickname || '林间小叙'
-            };
-        } else {
-            // 首次使用，插入默认配置
-            await supabase.from('user_profile').insert({
-                user_id: 'single_user',
-                avatar_type: 'emoji',
-                avatar_value: '🐻',
-                nickname: '林间小叙'
-            });
+        if (!supabaseClient) return;
+        try {
+            const { data, error } = await supabaseClient.from('user_profile').select('*').eq('user_id', 'single_user');
+            if (error) throw error;
+            if (data && data.length > 0) {
+                userProfile = {
+                    avatarType: data[0].avatar_type || 'emoji',
+                    avatarValue: data[0].avatar_value || '🐻',
+                    nickname: data[0].nickname || '林间小叙'
+                };
+            } else {
+                // 首次使用，插入默认配置
+                await supabaseClient.from('user_profile').insert({
+                    user_id: 'single_user',
+                    avatar_type: 'emoji',
+                    avatar_value: '🐻',
+                    nickname: '林间小叙'
+                });
+            }
+            applyProfileUI();
+        } catch(err) {
+            console.warn("loadProfile 失败", err);
+            isOnline = false;
+            showErrorMsg("⚠️ 云端连接失败，使用本地数据，稍后自动重试");
+            // 使用已有的 userProfile 默认值
+            applyProfileUI();
         }
-        applyProfileUI();
     }
-
     async function saveProfile() {
-        await supabase.from('user_profile').upsert({
-            user_id: 'single_user',
-            avatar_type: userProfile.avatarType,
-            avatar_value: userProfile.avatarValue,
-            nickname: userProfile.nickname
-        });
+        if (!supabaseClient) return;
+        try {
+            await supabaseClient.from('user_profile').upsert({
+                user_id: 'single_user',
+                avatar_type: userProfile.avatarType,
+                avatar_value: userProfile.avatarValue,
+                nickname: userProfile.nickname
+            });
+            isOnline = true;
+        } catch(err) { console.warn("saveProfile 失败", err); isOnline = false; }
     }
-
     async function loadMoments() {
-        const { data, error } = await supabase.from('moments').select('*').order('timestamp', { ascending: false });
-        if (error) { console.error(error); return; }
-        if (data) {
-            momentsList = data.map(m => ({
-                id: m.id,
-                text: m.text,
-                images: m.images || [],
-                timestamp: m.timestamp,
-                comments: m.comments || [],
-                authorAvatarType: m.author_avatar_type,
-                authorAvatarValue: m.author_avatar_value,
-                authorNickname: m.author_nickname
-            }));
-            renderMoments();
+        if (!supabaseClient) return;
+        try {
+            const { data, error } = await supabaseClient.from('moments').select('*').order('timestamp', { ascending: false });
+            if (error) throw error;
+            if (data) {
+                momentsList = data.map(m => ({
+                    id: m.id,
+                    text: m.text,
+                    images: m.images || [],
+                    timestamp: m.timestamp,
+                    comments: m.comments || [],
+                    authorAvatarType: m.author_avatar_type,
+                    authorAvatarValue: m.author_avatar_value,
+                    authorNickname: m.author_nickname
+                }));
+                renderMoments();
+                isOnline = true;
+            }
+        } catch(err) {
+            console.warn("loadMoments 失败", err);
+            isOnline = false;
+            // 若本地已有数据则显示，否则显示空状态
+            if (momentsList.length === 0) {
+                momentsFeed.innerHTML = '<div class="empty-tip">✨ 暂无动态<br><span style="font-size:12px;">云端连接异常，发布的内容将保存在本地</span></div>';
+            } else {
+                renderMoments(); // 尽量显示旧数据
+            }
+            showErrorMsg("⚠️ 加载云端动态失败，但您可以继续使用本地备份");
         }
     }
-
     async function addMoment(moment) {
-        const { error } = await supabase.from('moments').insert({
-            id: moment.id,
-            text: moment.text,
-            images: moment.images,
-            timestamp: moment.timestamp,
-            comments: moment.comments,
-            author_avatar_type: moment.authorAvatarType,
-            author_avatar_value: moment.authorAvatarValue,
-            author_nickname: moment.authorNickname
-        });
-        if (error) console.error(error);
+        if (!supabaseClient) {
+            // 无网络时仅存本地数组并渲染，同时提醒
+            momentsList.unshift(moment);
+            renderMoments();
+            showErrorMsg("📱 当前离线，动态已保存到本地，联网后自动同步");
+            return;
+        }
+        try {
+            const { error } = await supabaseClient.from('moments').insert({
+                id: moment.id,
+                text: moment.text,
+                images: moment.images,
+                timestamp: moment.timestamp,
+                comments: moment.comments,
+                author_avatar_type: moment.authorAvatarType,
+                author_avatar_value: moment.authorAvatarValue,
+                author_nickname: moment.authorNickname
+            });
+            if (error) throw error;
+            await loadMoments(); // 刷新
+        } catch(err) {
+            console.error("addMoment 失败", err);
+            // 失败时暂存本地
+            momentsList.unshift(moment);
+            renderMoments();
+            showErrorMsg("⚠️ 发布失败，已保存到本地稍后重试");
+        }
     }
-
     async function updateMomentComments(momentId, comments) {
-        await supabase.from('moments').update({ comments }).eq('id', momentId);
+        if (!supabaseClient) return;
+        try {
+            await supabaseClient.from('moments').update({ comments }).eq('id', momentId);
+            await loadMoments();
+        } catch(err) { console.warn("更新备注失败", err); }
     }
-
     async function deleteMomentFromCloud(momentId) {
-        await supabase.from('moments').delete().eq('id', momentId);
+        if (!supabaseClient) return;
+        try {
+            await supabaseClient.from('moments').delete().eq('id', momentId);
+            await loadMoments();
+        } catch(err) { console.warn("删除动态失败", err); }
     }
-
-    // 实时订阅（多设备自动同步）
     function subscribeToChanges() {
-        supabase.channel('moments-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'moments' }, payload => {
-                loadMoments();
-            })
+        if (!supabaseClient) return;
+        supabaseClient.channel('moments-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'moments' }, () => loadMoments())
             .subscribe();
-        supabase.channel('profile-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'user_profile' }, payload => {
-                loadProfile();
-            })
+        supabaseClient.channel('profile-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'user_profile' }, () => loadProfile())
             .subscribe();
     }
 
-    // ---------- UI 渲染 ----------
+    // ========== UI 渲染 ==========
     function applyProfileUI() {
+        if (!avatarEmojiDiv) return;
         if (userProfile.avatarType === 'emoji') {
             avatarEmojiDiv.style.display = 'flex';
             profileAvatarImg.style.display = 'none';
@@ -434,10 +479,10 @@
             publishMiniAvatar.src = userProfile.avatarValue;
         }
         profileNicknameSpan.textContent = userProfile.nickname;
-        saveProfile();
+        saveProfile().catch(()=>{});
     }
-
     function renderMoments() {
+        if (!momentsFeed) return;
         if (!momentsList.length) {
             momentsFeed.innerHTML = '<div class="empty-tip">✨ 暂无动态，写点温暖的故事吧～</div>';
             return;
@@ -448,11 +493,7 @@
             const comments = m.comments || [];
             const commentsHtml = comments.length ? `<div class="comment-list">${comments.map(c => `
                 <div class="comment-item">
-                    <div style="flex:1;">
-                        <span class="comment-name">${escapeHtml(c.name)}</span>
-                        <span class="comment-text">${escapeHtml(c.text)}</span>
-                        <span class="comment-time-small">${formatTime(c.timestamp)}</span>
-                    </div>
+                    <div style="flex:1;"><span class="comment-name">${escapeHtml(c.name)}</span><span class="comment-text">${escapeHtml(c.text)}</span><span class="comment-time-small">${formatTime(c.timestamp)}</span></div>
                     <button class="delete-comment-btn" data-mid="${m.id}" data-cid="${c.id}">删除</button>
                 </div>`).join('')}</div>` : '';
             return `
@@ -462,10 +503,7 @@
                         ${m.authorAvatarType === 'emoji' ? `<span style="font-size:28px;">${escapeHtml(m.authorAvatarValue)}</span>` : `<img src="${escapeHtml(m.authorAvatarValue)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`}
                     </div>
                     <div class="moment-info">
-                        <div class="moment-name-line">
-                            <span>${nickname}</span>
-                            <span class="moment-time">${formatTime(m.timestamp)}</span>
-                        </div>
+                        <div class="moment-name-line"><span>${nickname}</span><span class="moment-time">${formatTime(m.timestamp)}</span></div>
                     </div>
                 </div>
                 <div class="moment-content">${linkify(m.text)}</div>
@@ -477,13 +515,10 @@
                         <button class="comment-submit" data-mid="${m.id}">发送</button>
                     </div>
                 </div>
-                <div class="moment-actions">
-                    <button class="more-btn" data-mid="${m.id}">···</button>
-                </div>
+                <div class="moment-actions"><button class="more-btn" data-mid="${m.id}">···</button></div>
             </div>`;
         }).join('');
-
-        // 绑定删除备注
+        // 绑定动态事件
         document.querySelectorAll('.delete-comment-btn').forEach(btn => {
             btn.addEventListener('click', async e => {
                 e.stopPropagation();
@@ -492,11 +527,9 @@
                 if (moment && confirm('删除这条备注？')) {
                     moment.comments = moment.comments.filter(c => c.id !== cid);
                     await updateMomentComments(mid, moment.comments);
-                    await loadMoments();
                 }
             });
         });
-        // 绑定发送备注
         document.querySelectorAll('.comment-submit').forEach(btn => {
             btn.addEventListener('click', async e => {
                 e.stopPropagation();
@@ -506,18 +539,12 @@
                 if (!text) return;
                 const moment = momentsList.find(m => m.id === mid);
                 if (moment) {
-                    moment.comments.push({
-                        id: Date.now() + '-' + Math.random().toString(36).slice(2,8),
-                        name: userProfile.nickname,
-                        text,
-                        timestamp: Date.now()
-                    });
+                    moment.comments.push({ id: Date.now()+'-'+Math.random().toString(36).slice(2), name: userProfile.nickname, text, timestamp: Date.now() });
                     await updateMomentComments(mid, moment.comments);
-                    await loadMoments();
                 }
+                if(input) input.value = '';
             });
         });
-        // 绑定三点菜单
         document.querySelectorAll('.more-btn').forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
@@ -534,15 +561,11 @@
         });
     }
 
-    // 发布动态
+    // ========== 业务逻辑 ==========
     async function publishMoment() {
         const text = postTextarea.value.trim();
-        if (!text && !tempImageFiles.length) {
-            alert('写点什么吧');
-            return;
-        }
+        if (!text && !tempImageFiles.length) { alert('写点什么吧'); return; }
         publishBtn.disabled = true;
-        publishBtn.textContent = '发布中...';
         const newMoment = {
             id: Date.now() + '-' + Math.random().toString(36).slice(2,8),
             text: text || '📸 分享图片',
@@ -557,212 +580,130 @@
         postTextarea.value = '';
         tempImageFiles = [];
         updateImagePreview();
-        await loadMoments();
         publishBtn.disabled = false;
-        publishBtn.textContent = '✨ 发布动态';
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-
-    // 图片处理
     function updateImagePreview() {
         previewContainer.innerHTML = '';
         tempImageFiles.forEach((src, idx) => {
-            const wrap = document.createElement('div');
-            wrap.style.position = 'relative';
-            const img = document.createElement('img');
-            img.src = src;
-            img.className = 'preview-img';
-            const del = document.createElement('button');
-            del.innerText = '✕';
-            Object.assign(del.style, {
-                position: 'absolute', top: '-8px', right: '-8px', background: '#ff5e5e',
-                color: 'white', border: 'none', borderRadius: '50%', width: '22px',
-                height: '22px', cursor: 'pointer', fontSize: '12px'
-            });
-            del.onclick = () => {
-                tempImageFiles.splice(idx, 1);
-                updateImagePreview();
-            };
-            wrap.appendChild(img);
-            wrap.appendChild(del);
+            const wrap = document.createElement('div'); wrap.style.position='relative';
+            const img = document.createElement('img'); img.src=src; img.className='preview-img';
+            const del = document.createElement('button'); del.innerText='✕';
+            Object.assign(del.style, { position:'absolute', top:'-8px', right:'-8px', background:'#ff5e5e', color:'white', border:'none', borderRadius:'50%', width:'22px', height:'22px', cursor:'pointer', fontSize:'12px' });
+            del.onclick = () => { tempImageFiles.splice(idx,1); updateImagePreview(); };
+            wrap.appendChild(img); wrap.appendChild(del);
             previewContainer.appendChild(wrap);
         });
     }
-
     async function handleImageUpload(files) {
         const canAdd = Math.min(files.length, 4 - tempImageFiles.length);
-        if (canAdd <= 0) {
-            alert('最多4张图片');
-            return;
-        }
+        if (canAdd <= 0) { alert('最多4张图片'); return; }
         for (const file of Array.from(files).slice(0, canAdd)) {
-            try {
-                const compressed = await compressImage(file);
-                tempImageFiles.push(compressed);
-            } catch (err) {
-                alert('图片处理失败');
-            }
+            try { tempImageFiles.push(await compressImage(file)); } catch { alert('图片处理失败'); }
         }
         updateImagePreview();
         imageUpload.value = '';
     }
-
-    // 头像/昵称操作
     function openAvatarModal() { avatarModal.style.display = 'flex'; }
     function closeAvatarModal() { avatarModal.style.display = 'none'; }
     function setEmojiAvatar(emoji) {
-        userProfile.avatarType = 'emoji';
-        userProfile.avatarValue = emoji;
-        applyProfileUI();
-        closeAvatarModal();
+        userProfile.avatarType = 'emoji'; userProfile.avatarValue = emoji;
+        applyProfileUI(); closeAvatarModal();
     }
     async function uploadImageAvatar() {
         const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
+        input.type = 'file'; input.accept = 'image/*';
         input.onchange = async e => {
             const file = e.target.files[0];
-            if (file) {
-                const compressed = await compressImage(file);
-                userProfile.avatarType = 'image';
-                userProfile.avatarValue = compressed;
-                applyProfileUI();
-                closeAvatarModal();
-            }
+            if (file) { const comp = await compressImage(file); userProfile.avatarType = 'image'; userProfile.avatarValue = comp; applyProfileUI(); closeAvatarModal(); }
         };
         input.click();
     }
     function editNickname() {
         const name = prompt('新昵称 (≤20字):', userProfile.nickname);
-        if (name && name.trim()) {
-            userProfile.nickname = name.trim().substring(0, 20);
-            applyProfileUI();
-        }
+        if (name && name.trim()) { userProfile.nickname = name.trim().substring(0,20); applyProfileUI(); }
     }
-
     async function deleteMoment(momentId) {
         if (confirm('删除动态不可恢复，确定吗？')) {
             await deleteMomentFromCloud(momentId);
-            await loadMoments();
         }
     }
-
-    // 全局图片预览
     window.viewImage = (src) => {
         const modalDiv = document.createElement('div');
-        Object.assign(modalDiv.style, {
-            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-            background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', zIndex: 10000
-        });
+        modalDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:10000';
         const imgEl = document.createElement('img');
-        imgEl.src = src;
-        imgEl.style.maxWidth = '90%';
-        imgEl.style.maxHeight = '90%';
-        imgEl.style.borderRadius = '24px';
-        modalDiv.appendChild(imgEl);
-        modalDiv.onclick = () => modalDiv.remove();
+        imgEl.src = src; imgEl.style.maxWidth='90%'; imgEl.style.maxHeight='90%'; imgEl.style.borderRadius='24px';
+        modalDiv.appendChild(imgEl); modalDiv.onclick = () => modalDiv.remove();
         document.body.appendChild(modalDiv);
     };
-
-    // 导出/导入备份（基于当前云端数据）
     function exportData() {
-        const dataStr = JSON.stringify({ moments: momentsList, profile: userProfile }, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `backup_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
+        const blob = new Blob([JSON.stringify({ moments: momentsList, profile: userProfile }, null, 2)], {type:'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
     }
     function importData() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
+        const input = document.createElement('input'); input.type='file'; input.accept='.json';
         input.onchange = async e => {
-            const file = e.target.files[0];
-            if (!file) return;
+            const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = async ev => {
                 try {
                     const data = JSON.parse(ev.target.result);
                     if (data.moments && data.profile) {
                         if (!confirm('导入将覆盖云端现有数据，确定？')) return;
-                        await supabase.from('moments').delete().neq('id', '');
+                        if (supabaseClient) await supabaseClient.from('moments').delete().neq('id', '');
                         for (const m of data.moments) {
-                            await supabase.from('moments').insert({
-                                id: m.id,
-                                text: m.text,
-                                images: m.images || [],
-                                timestamp: m.timestamp,
-                                comments: m.comments || [],
-                                author_avatar_type: m.authorAvatarType,
-                                author_avatar_value: m.authorAvatarValue,
-                                author_nickname: m.authorNickname
-                            });
+                            if (supabaseClient) await supabaseClient.from('moments').insert({ id: m.id, text: m.text, images: m.images||[], timestamp: m.timestamp, comments: m.comments||[], author_avatar_type: m.authorAvatarType, author_avatar_value: m.authorAvatarValue, author_nickname: m.authorNickname });
                         }
-                        await supabase.from('user_profile').upsert({
-                            user_id: 'single_user',
-                            avatar_type: data.profile.avatarType,
-                            avatar_value: data.profile.avatarValue,
-                            nickname: data.profile.nickname
-                        });
-                        await loadProfile();
-                        await loadMoments();
+                        if (supabaseClient) await supabaseClient.from('user_profile').upsert({ user_id: 'single_user', avatar_type: data.profile.avatarType, avatar_value: data.profile.avatarValue, nickname: data.profile.nickname });
+                        await loadProfile(); await loadMoments();
                         alert('恢复成功！');
-                    } else {
-                        alert('无效备份文件');
-                    }
-                } catch (err) {
-                    alert('解析失败');
-                }
+                    } else alert('无效备份文件');
+                } catch(err) { alert('解析失败'); }
             };
             reader.readAsText(file);
         };
         input.click();
     }
 
-    // 事件绑定
+    // ========== 事件绑定（确保按钮可点）==========
     function bindEvents() {
-        publishBtn.addEventListener('click', publishMoment);
-        imageUpload.addEventListener('change', e => handleImageUpload(e.target.files));
-        document.querySelector('.upload-btn').addEventListener('click', () => imageUpload.click());
-        editNicknameBtn.addEventListener('click', editNickname);
-        avatarEditBtn.addEventListener('click', openAvatarModal);
-        postTextarea.addEventListener('keydown', e => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') publishMoment();
-        });
-        closeAvatarModalBtn.addEventListener('click', closeAvatarModal);
-        uploadImageBtn.addEventListener('click', uploadImageAvatar);
-        emojiGrid.querySelectorAll('.emoji-option').forEach(s =>
-            s.addEventListener('click', () => setEmojiAvatar(s.textContent.trim()))
-        );
-        avatarModal.addEventListener('click', e => { if (e.target === avatarModal) closeAvatarModal(); });
-        exportBtn.addEventListener('click', exportData);
-        importBtn.addEventListener('click', importData);
-        dropdownAddComment.addEventListener('click', () => {
+        if (publishBtn) publishBtn.addEventListener('click', publishMoment);
+        if (imageUpload) imageUpload.addEventListener('change', e => handleImageUpload(e.target.files));
+        const uploadLabel = document.querySelector('.upload-btn');
+        if (uploadLabel) uploadLabel.addEventListener('click', () => imageUpload.click());
+        if (editNicknameBtn) editNicknameBtn.addEventListener('click', editNickname);
+        if (avatarEditBtn) avatarEditBtn.addEventListener('click', openAvatarModal);
+        if (postTextarea) postTextarea.addEventListener('keydown', e => { if ((e.ctrlKey||e.metaKey) && e.key==='Enter') publishMoment(); });
+        if (closeAvatarModalBtn) closeAvatarModalBtn.addEventListener('click', closeAvatarModal);
+        if (uploadImageBtn) uploadImageBtn.addEventListener('click', uploadImageAvatar);
+        if (emojiGrid) emojiGrid.querySelectorAll('.emoji-option').forEach(s => s.addEventListener('click', () => setEmojiAvatar(s.textContent.trim())));
+        if (avatarModal) avatarModal.addEventListener('click', e => { if (e.target===avatarModal) closeAvatarModal(); });
+        if (exportBtn) exportBtn.addEventListener('click', exportData);
+        if (importBtn) importBtn.addEventListener('click', importData);
+        if (dropdownAddComment) dropdownAddComment.addEventListener('click', () => {
             if (currentMomentId) {
                 const row = document.getElementById(`inputRow-${currentMomentId}`);
                 if (row) row.classList.remove('hidden');
             }
             dropdownMenu.style.display = 'none';
         });
-        dropdownDelete.addEventListener('click', () => {
+        if (dropdownDelete) dropdownDelete.addEventListener('click', () => {
             if (currentMomentId) deleteMoment(currentMomentId);
             dropdownMenu.style.display = 'none';
         });
         document.addEventListener('click', (e) => {
-            if (dropdownMenu && !dropdownMenu.contains(e.target) && !e.target.classList?.contains('more-btn')) {
-                dropdownMenu.style.display = 'none';
-            }
+            if (dropdownMenu && !dropdownMenu.contains(e.target) && !e.target.classList?.contains('more-btn')) dropdownMenu.style.display = 'none';
         });
     }
 
     // 初始化
     async function init() {
-        bindEvents();
+        bindEvents();               // 先绑定，保证按钮可点
         await loadProfile();
         await loadMoments();
         subscribeToChanges();
+        // 若本地有缓存但云端为空，渲染已有数据
+        if (momentsList.length) renderMoments();
     }
     init();
 </script>
